@@ -4,6 +4,7 @@ import { Stage, Layer, Rect, Circle, TextPath, Text } from "react-konva";
 const Home = () => {
   const [shapes, setShapes] = useState([{}]);
 
+  const [shapeType, setShapeType] = useState("rect"); // circle
   const canvasRef = useRef(null);
 
   let idRef = useRef(null);
@@ -24,12 +25,15 @@ const Home = () => {
 
         idRef.current = Date.now();
 
+        console.log(shapeType);
+
         let shape = {
           x: x,
           y: y,
           width: 0,
           height: 0,
-          type: "rect",
+          radius: 0,
+          type: shapeType,
           fill: "red",
           stroke: "white",
           strokeWidth: 30,
@@ -45,9 +49,14 @@ const Home = () => {
 
         setShapes((shapes) => {
           return shapes.map((shape) => {
-            if (shape.id === idRef.current) {
+            if (shape.type === "rect" && shape.id === idRef.current) {
               shape.height = e.clientY - y;
               shape.width = e.clientX - x;
+            } else if (shape.type === "circle" && shape.id === idRef.current) {
+              let d = (e.clientX - x) ** 2 + (e.clientY - y) ** 2;
+              let r = Math.sqrt(d);
+
+              shape.radius = r;
             }
             return shape;
           });
@@ -66,12 +75,31 @@ const Home = () => {
         canvasEl.removeEventListener("mousemove");
       };
     }
-  }, []);
+  }, [shapeType]);
 
   return (
     <>
+      <div className="fixed z-40 top-4 flex justify-center items-center w-full">
+        <div className="w-48 text-white flex gap-4">
+          <button
+            onClick={() => setShapeType("rect")}
+            className="border-2 border-amber-100
+             px-4 py-2 rounded-2xl cursor-pointer"
+          >
+            Rectangle
+          </button>
+          <button
+            onClick={() => setShapeType("circle")}
+            className="border-2 border-amber-100
+             px-4 py-2 rounded-2xl cursor-pointer"
+          >
+            Circle
+          </button>
+        </div>
+      </div>
+
       <Stage
-        className="bg-slate-800 min-h-screen text-slate-100"
+        className="bg-zinc-950 min-h-screen text-slate-100"
         width={window.innerWidth}
         height={window.innerHeight}
         ref={canvasRef}
@@ -87,6 +115,19 @@ const Home = () => {
                   width={shape.width}
                   height={shape.height}
                   fill={shape.fill}
+                  draggable
+                  strokeWidth={5}
+                  opacity={0.8}
+                  stroke={"white"}
+                />
+              );
+            } else if (shape.type === "circle") {
+              return (
+                <Circle
+                  x={shape.x}
+                  y={shape.y}
+                  radius={shape.radius}
+                  fill={"red"}
                   draggable
                   strokeWidth={5}
                   opacity={0.8}
