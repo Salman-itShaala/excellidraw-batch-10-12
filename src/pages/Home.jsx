@@ -1,12 +1,22 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Stage, Layer, Rect, Circle, TextPath, Text, Line } from "react-konva";
+import { FaRegSquare } from "react-icons/fa6";
+import { FaRegCircle } from "react-icons/fa";
+import { LuPencil } from "react-icons/lu";
+import Sidebar from "../components/Sidebar";
+
+const colors = ["white", "red", "green", "blue", "yellow"];
 
 const Home = () => {
-  const [shapes, setShapes] = useState([{}]);
+  const savedShapes = JSON.parse(localStorage.getItem("shapes")) || [];
 
+  const [shapes, setShapes] = useState(savedShapes);
+  const [strokeColor, setStrokeColor] = useState("white");
+  const [bgColor, setBgColor] = useState("white");
+  const [strokeWidth, setStrokeWidth] = useState(2);
+  const [opacity, setOpacity] = useState(1);
   const [shapeType, setShapeType] = useState("rect"); // circle
   const canvasRef = useRef(null);
-
   let idRef = useRef(null);
 
   useEffect(() => {
@@ -23,8 +33,6 @@ const Home = () => {
 
         idRef.current = Date.now();
 
-        console.log(shapeType);
-
         let shape = {
           points: [x, y],
           x: x,
@@ -33,21 +41,24 @@ const Home = () => {
           height: 0,
           radius: 0,
           type: shapeType,
-          fill: "red",
-          stroke: "white",
-          strokeWidth: 30,
-          opacity: 0.5,
+          fill: bgColor,
+          stroke: strokeColor,
+          strokeWidth: strokeWidth,
+          opacity: opacity,
           id: idRef.current,
         };
 
-        setShapes((p) => [...p, shape]);
+        setShapes((p) => {
+          localStorage.setItem("shapes", JSON.stringify([...p, shape]));
+          return [...p, shape];
+        });
       };
 
       const handleMouseMove = (e) => {
         if (!isDrawing) return;
 
         setShapes((shapes) => {
-          return shapes.map((shape) => {
+          let newArray = shapes.map((shape) => {
             if (shape.type === "rect" && shape.id === idRef.current) {
               shape.height = e.clientY - y;
               shape.width = e.clientX - x;
@@ -60,6 +71,9 @@ const Home = () => {
             }
             return shape;
           });
+
+          localStorage.setItem("shapes", JSON.stringify(newArray));
+          return newArray;
         });
       };
 
@@ -79,10 +93,11 @@ const Home = () => {
         canvasEl.removeEventListener("mousemove", handleMouseMove);
       };
     }
-  }, [shapeType]);
+  }, [shapeType, strokeColor, bgColor, strokeWidth, opacity]);
 
   function handleDragEnd(e, id) {
-    console.log(e.evt);
+    // you can call some function on that e object to
+    // get current x and y
 
     setShapes((shapes) => {
       return shapes.map((shape) => {
@@ -94,40 +109,56 @@ const Home = () => {
         return shape;
       });
     });
+
+    // todo save to locaStorage
   }
+
+  useEffect(() => {
+    setShapes(JSON.parse(localStorage.getItem("shapes")) || []);
+  }, []);
 
   return (
     <>
+      <Sidebar
+        setStrokeColor={setStrokeColor}
+        setBgColor={setBgColor}
+        setStrokeWidth={setStrokeWidth}
+        setOpacity={setOpacity}
+        opacity={opacity}
+      />
       <div className="fixed z-40 top-4 flex justify-center items-center w-full">
-        <div className=" text-white flex gap-4 p-2 bg-slate-500 rounded-2xl">
+        <div className=" text-white flex gap-4 p-1 bg-[#232329] rounded-lg">
           {/* todo improve this : - create array for shapes and
            use map on that array to return all these buttons */}
           <button
             onClick={() => setShapeType("rect")}
-            className="border-2 border-amber-100
-             px-4 py-2 rounded-2xl cursor-pointer"
+            className={`px-4 py-3 rounded-lg cursor-pointer hover:bg-[#403e6a80] ${
+              shapeType === "rect" && "bg-[#403E6A]"
+            }`}
           >
-            Rectangle
+            <FaRegSquare />
           </button>
           <button
             onClick={() => setShapeType("circle")}
-            className="border-2 border-amber-100
-             px-4 py-2 rounded-2xl cursor-pointer"
+            className={`px-4 py-3 rounded-lg cursor-pointer hover:bg-[#403e6a80] ${
+              shapeType === "circle" && "bg-[#403E6A]"
+            }`}
           >
-            Circle
+            <FaRegCircle />
           </button>
           <button
             onClick={() => setShapeType("line")}
-            className="border-2 border-amber-100
-             px-4 py-2 rounded-2xl cursor-pointer"
+            className={`px-4 py-3 rounded-lg cursor-pointer hover:bg-[#403e6a80] ${
+              shapeType === "line" && "bg-[#403E6A]"
+            }`}
           >
-            Draw
+            <LuPencil />
           </button>
         </div>
       </div>
 
       <Stage
-        className="bg-zinc-950 min-h-screen text-slate-100"
+        className="bg-[#121212] min-h-screen text-slate-100"
         width={window.innerWidth}
         height={window.innerHeight}
         ref={canvasRef}
@@ -144,9 +175,9 @@ const Home = () => {
                   height={shape.height}
                   fill={shape.fill}
                   draggable
-                  strokeWidth={5}
-                  opacity={0.8}
-                  stroke={"white"}
+                  strokeWidth={shape.strokeWidth}
+                  opacity={shape.opacity}
+                  stroke={shape.stroke}
                   onDragEnd={(e) => handleDragEnd(e, shape.id)}
                 />
               );
@@ -156,19 +187,19 @@ const Home = () => {
                   x={shape.x}
                   y={shape.y}
                   radius={shape.radius}
-                  fill={"red"}
+                  fill={shape.fill}
                   draggable
-                  strokeWidth={5}
-                  opacity={0.8}
-                  stroke={"white"}
+                  strokeWidth={shape.strokeWidth}
+                  opacity={shape.opacity}
+                  stroke={shape.stroke}
                 />
               );
             } else if (shape.type === "line") {
               return (
                 <Line
                   points={shape.points}
-                  stroke={"green"}
-                  strokeWidth={2}
+                  stroke={shape.stroke}
+                  strokeWidth={shape.strokeWidth}
                   lineJoin="round"
                   // dash={[33, 10]}
                   lineCap="round"
